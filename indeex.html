@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Черные Цифровые Часы</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: black !important;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Контейнер для часов */
+        .clock-container {
+            display: flex;
+            align-items: baseline;
+            font-weight: 900;
+            margin-bottom: 30px;
+            cursor: pointer;
+        }
+
+        .main-time {
+            font-size: 15vw;
+            line-height: 1;
+            -webkit-text-stroke: 2px #00ff00;
+        }
+
+        .dots {
+            font-size: 15vw;
+            line-height: 1;
+            margin: 0 5px;
+            animation: blink 1s infinite steps(1, start);
+        }
+
+        .seconds {
+            font-size: 7.5vw;
+            line-height: 1;
+            margin-left: 10px;
+            font-weight: 900;
+            transition: opacity 0.2s ease, width 0.2s ease;
+        }
+
+        .seconds.hidden {
+            display: none;
+        }
+
+        /* Контейнер для переключателя секунд */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 35px;
+            font-size: 14px;
+            color: #008800;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #002200;
+            border: 1px solid #00ff00;
+            transition: .3s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #00ff00;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #004400;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* НОВЫЙ БЛОК: Горизонтальный спектральный индикатор */
+        .linear-battery-container {
+            width: 65vw;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        /* Сильно растянутые цифры над строчкой */
+        .stretched-battery-text {
+            font-size: 8vw;
+            font-weight: 900;
+            font-family: Impact, sans-serif; /* Шрифт для максимальной массивности цифр */
+            transform: scaleX(1.8); /* Экстремальное растяжение по горизонтали */
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            transition: color 0.5s ease;
+            line-height: 1;
+        }
+
+        /* Сама горизонтальная линия-подложка */
+        .battery-bar-bg {
+            width: 100%;
+            height: 12px;
+            background-color: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Заполняющаяся активная строка (слева направо) */
+        .battery-bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease, background-color 0.5s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+        }
+
+        /* Анимация пульсации при зарядке для полосы */
+        .charging-pulse {
+            animation: barPulse 2s infinite ease-in-out;
+        }
+
+        /* Круговой блок батареи (опущен ниже) */
+        .battery-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .triangle-svg {
+            width: 45px;
+            height: 45px;
+        }
+
+        .triangle-path {
+            fill: none;
+            stroke: white;
+            stroke-width: 5;
+            stroke-linejoin: miter;
+            transition: fill 0.3s ease, stroke 0.3s ease;
+        }
+
+        .discharging-active {
+            fill: #d32f2f !important;
+            stroke: #d32f2f !important;
+        }
+
+        .charging-active {
+            fill: #00ff00 !important;
+            stroke: #00ff00 !important;
+        }
+
+        .battery-container {
+            position: relative;
+            width: 125px;
+            height: 125px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .battery-svg {
+            transform: rotate(-90deg);
+            width: 125px;
+            height: 125px;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: #002200;
+            stroke-width: 11;
+        }
+
+        .circle-progress {
+            fill: none;
+            stroke: #00ff00;
+            stroke-width: 11;
+            stroke-dasharray: 326;
+            stroke-dashoffset: 326;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .battery-text {
+            position: absolute;
+            font-size: 22px;
+            font-weight: 900;
+            color: #00ff00;
+        }
+
+        .fullscreen-hint {
+            position: absolute;
+            bottom: 20px;
+            color: #444;
+            font-size: 13px;
+            text-align: center;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        :fullscreen .fullscreen-hint { display: none; }
+        :-webkit-full-screen .fullscreen-hint { display: none; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        @keyframes barPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 12px rgba(0, 255, 0, 0.4); }
+            50% { opacity: 0.6; box-shadow: 0 0 4px rgba(0, 255, 0, 0.1); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Часы -->
+    <div class="clock-container" id="clockBox">
+        <span class="main-time" id="hmTime">00:00</span>
+        <span class="dots">:</span>
+        <span class="seconds" id="secTime">00</span>
+    </div>
+
+    <!-- Переключатель секунд -->
+    <div class="toggle-container">
+        <span>Показывать секунды</span>
+        <label class="switch">
+            <input type="checkbox" id="secondsToggle" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <!-- НОВАЯ СТРОКА: Растянутые цифры и спектральная полоса заряда -->
+    <div class="linear-battery-container">
+        <div class="stretched-battery-text" id="stretchedPercent">--%</div>
+        <div class="battery-bar-bg">
+            <div class="battery-bar-fill" id="batteryBar"></div>
+        </div>
+    </div>
+
+    <!-- Индикация батареи (Круг и треугольники) -->
+    <div class="battery-section">
+        <svg class="triangle-svg" viewBox="0 0 60 60">
+            <polygon id="triDown" class="triangle-path" points="5,15 55,15 30,50" />
+        </svg>
+
+        <div class="battery-container">
+            <svg class="battery-svg">
+                <circle class="circle-bg" cx="62.5" cy="62.5" r="52"></circle>
+                <circle class="circle-progress" id="batteryCircle" cx="62.5" cy="62.5" r="52"></circle>
+            </svg>
+            <div class="battery-text" id="batteryPercent">--%</div>
+        </div>
+
+        <svg class="triangle-svg" viewBox="0 0 60 60">
+            <polygon id="triUp" class="triangle-path" points="30,10 5,45 55,45" />
+        </svg>
+    </div>
+
+    <div class="fullscreen-hint">Нажмите на часы или батарею, чтобы активировать режим часов</div>
+
+    <script>
+        const hmDisplay = document.getElementById('hmTime');
+        const secDisplay = document.getElementById('secTime');
+        const batteryCircle = document.getElementById('batteryCircle');
+        const batteryPercent = document.getElementById('batteryPercent');
+        
+        // Элементы новой строки
+        const batteryBar = document.getElementById('batteryBar');
+        const stretchedPercent = document.getElementById('stretchedPercent');
+
+        const triDown = document.getElementById('triDown');
+        const triUp = document.getElementById('triUp');
+        const secondsToggle = document.getElementById('secondsToggle');
+
+        let wakeLock = null;
+        let clockInterval = null;
+
+        function updateClock() {
+            const now = new Date();
+            let hours = String(now.getHours()).padStart(2, '0');
+            let minutes = String(now.getMinutes()).padStart(2, '0');
+            let seconds = String(now.getSeconds()).padStart(2, '0');
+
+            if(hmDisplay) hmDisplay.textContent = hours + ':' + minutes;
+            if(secDisplay) secDisplay.textContent = seconds;
+        }
+
+        function startTimer() {
+            updateClock();
+            if (clockInterval) clearInterval(clockInterval);
+            clockInterval = setInterval(updateClock, 1000);
+        }
+
+        secondsToggle.addEventListener('change', function() {
+            if (this.checked) {
+                secDisplay.classList.remove('hidden');
+
